@@ -12,8 +12,7 @@ Decentralized peer-to-peer lending platform built on Ethereum that enables colla
 │   ├── components/    # React components
 │   ├── hooks/         # Custom React hooks
 │   └── utils/         # Utility functions
-├── public/            # Static assets
-└── .kiro/specs/       # Project specifications
+└── public/     # Static assets 
 ```
 
 ## Prerequisites
