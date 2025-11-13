@@ -161,6 +161,18 @@ const useContract = (account, isCorrectNetwork) => {
     );
   }, [contract, executeTransaction]);
 
+  const removeCollateral = useCallback(async (onSuccess, onError) => {
+    if (!contract) return null;
+    
+    return executeTransaction(
+      contract.removeCollateral,
+      [],
+      0,
+      onSuccess,
+      onError
+    );
+  }, [contract, executeTransaction]);
+
   const liquidate = useCallback(async (borrowerAddress, onSuccess, onError) => {
     if (!contract) return null;
     
@@ -264,6 +276,18 @@ const useContract = (account, isCorrectNetwork) => {
     }
   }, [contract, account]);
 
+  const getActiveLoanCount = useCallback(async () => {
+    if (!contract) return null;
+    
+    try {
+      const count = await contract.getActiveLoanCount();
+      return Number(count);
+    } catch (error) {
+      console.error('Error getting active loan count:', error);
+      return null;
+    }
+  }, [contract]);
+
   // Contract constants
   const getConstants = useCallback(async () => {
     if (!contract) return null;
@@ -364,6 +388,7 @@ const useContract = (account, isCorrectNetwork) => {
     depositCollateral,
     borrow,
     repayLoan,
+    removeCollateral,
     
     // Liquidation
     liquidate,
@@ -376,6 +401,7 @@ const useContract = (account, isCorrectNetwork) => {
     getCollateralRatio,
     getAvailableBorrowAmount,
     isLoanLiquidatable,
+    getActiveLoanCount,
     getConstants,
     
     // MockToken functions
@@ -400,6 +426,7 @@ const useContract = (account, isCorrectNetwork) => {
     depositCollateral,
     borrow,
     repayLoan,
+    removeCollateral,
     liquidate,
     getLoanDetails,
     getLenderDetails,
@@ -408,6 +435,7 @@ const useContract = (account, isCorrectNetwork) => {
     getCollateralRatio,
     getAvailableBorrowAmount,
     isLoanLiquidatable,
+    getActiveLoanCount,
     getConstants,
     tokenContract,
     getMockDaiBalance,
@@ -440,6 +468,14 @@ const parseContractError = (error) => {
   
   if (error.message.includes('NoActiveLoan')) {
     return 'No active loan found';
+  }
+  
+  if (error.message.includes('Active loan exists')) {
+    return 'Cannot remove collateral while you have an active loan';
+  }
+  
+  if (error.message.includes('No collateral to remove')) {
+    return 'No collateral available to remove';
   }
   
   if (error.message.includes('InsufficientFunds')) {

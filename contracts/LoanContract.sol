@@ -11,6 +11,9 @@ contract LoanContract {
     
     // State variables
     uint256 public totalPoolBalance;
+    uint256 public totalInterestEarned;
+    uint256 public totalDeposited;
+    uint256 public activeLoanCount;
     IERC20 public mockToken;
     
     // Structs
@@ -37,6 +40,7 @@ contract LoanContract {
     event LenderDeposit(address indexed lender, uint256 amount);
     event LenderWithdraw(address indexed lender, uint256 amount);
     event CollateralDeposited(address indexed borrower, uint256 amount);
+    event CollateralRemoved(address indexed borrower, uint256 amount);
     event LoanIssued(address indexed borrower, uint256 loanAmount, uint256 interest, uint256 dueTime);
     event LoanRepaid(address indexed borrower, uint256 totalAmount);
     event Liquidated(address indexed borrower, uint256 collateralAmount);
@@ -67,6 +71,9 @@ contract LoanContract {
         // Update total pool balance
         totalPoolBalance += msg.value;
         
+        // Update total deposited
+        totalDeposited += msg.value;
+        
         emit LenderDeposit(msg.sender, msg.value);
     }
     
@@ -74,15 +81,38 @@ contract LoanContract {
         Lender storage lender = lenders[msg.sender];
         require(lender.depositAmount > 0, "No funds to withdraw");
         
-        uint256 withdrawAmount = lender.depositAmount;
+        // Calculate lender's proportional share of the pool
+        uint256 lenderShare = lender.depositAmount;
+        uint256 proportionalInterest = 0;
         
-        // Check if there's sufficient liquidity (considering active loans)
+        // Calculate proportional interest if there's any interest earned and total deposits
+        if (totalInterestEarned > 0 && totalDeposited > 0) {
+            proportionalInterest = (totalInterestEarned * lenderShare) / totalDeposited;
+        }
+        
+        // Total withdrawal = principal + proportional interest
+        uint256 withdrawAmount = lenderShare + proportionalInterest;
+        
+        // Check if there's sufficient liquidity
         require(address(this).balance >= withdrawAmount, "Insufficient contract balance");
-        require(totalPoolBalance >= withdrawAmount, "Insufficient pool liquidity");
         
-        // Update state before transfer
+        // Update state before transfer to prevent reentrancy
         lender.depositAmount = 0;
-        totalPoolBalance -= withdrawAmount;
+        totalDeposited -= lenderShare;
+        
+        // Reduce pool balance proportionally
+        if (totalPoolBalance >= lenderShare) {
+            totalPoolBalance -= lenderShare;
+        } else {
+            totalPoolBalance = 0;
+        }
+        
+        // Reduce interest earned proportionally
+        if (totalInterestEarned >= proportionalInterest) {
+            totalInterestEarned -= proportionalInterest;
+        } else {
+            totalInterestEarned = 0;
+        }
         
         // Transfer funds
         (bool success, ) = payable(msg.sender).call{value: withdrawAmount}("");
@@ -102,6 +132,29 @@ contract LoanContract {
         loan.collateralAmount += msg.value;
         
         emit CollateralDeposited(msg.sender, msg.value);
+    }
+    
+    function removeCollateral() external {
+        Loan storage loan = loans[msg.sender];
+        
+        // Validation: Check borrower has collateral to remove
+        require(loan.collateralAmount > 0, "No collateral to remove");
+        
+        // Validation: Prevent collateral removal when active loan exists
+        // Active loan means: loanAmount > 0 AND not repaid AND not liquidated
+        require(loan.loanAmount == 0 || loan.repaid || loan.liquidated, "Active loan exists");
+        
+        uint256 collateralToReturn = loan.collateralAmount;
+        
+        // Update state before transfer to prevent reentrancy
+        loan.collateralAmount = 0;
+        
+        // Transfer collateral back to borrower
+        (bool success, ) = payable(msg.sender).call{value: collateralToReturn}("");
+        require(success, "Collateral transfer failed");
+        
+        // Emit event on successful removal
+        emit CollateralRemoved(msg.sender, collateralToReturn);
     }
     
     function borrow(uint256 mockDaiAmount) external {
@@ -137,6 +190,9 @@ contract LoanContract {
         
         // Update pool balance (ETH backing)
         totalPoolBalance -= mockDaiAmount;
+        
+        // Increment active loan count
+        activeLoanCount++;
         
         // Transfer MockDAI to borrower
         bool success = mockToken.transfer(msg.sender, mockDaiAmount);
@@ -182,8 +238,11 @@ contract LoanContract {
         // Add principal repayment to pool balance (ETH backing)
         totalPoolBalance += principalAmount;
         
-        // Interest (interestDeduction) stays in the pool as additional ETH backing (benefits lenders)
-        // This increases the pool's ETH reserves without increasing totalPoolBalance
+        // Track interest earned for distribution to lenders
+        totalInterestEarned += interestDeduction;
+        
+        // Decrement active loan count
+        activeLoanCount--;
         
         // Return ETH collateral minus interest to borrower
         if (finalCollateralReturn > 0) {
@@ -208,6 +267,9 @@ contract LoanContract {
         
         // Update loan status
         loan.liquidated = true;
+        
+        // Decrement active loan count
+        activeLoanCount--;
         
         // Transfer collateral to lending pool
         uint256 collateralAmount = loan.collateralAmount;
@@ -288,5 +350,9 @@ contract LoanContract {
         uint256 availableInPool = totalPoolBalance;
         
         return maxBorrowFromCollateral < availableInPool ? maxBorrowFromCollateral : availableInPool;
+    }
+    
+    function getActiveLoanCount() external view returns (uint256) {
+        return activeLoanCount;
     }
 }

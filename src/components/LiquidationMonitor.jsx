@@ -190,13 +190,13 @@ const LiquidationMonitor = ({ account, isVisible = true }) => {
   if (!isVisible) return null;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">Liquidation Monitor</h2>
+    <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      <div className="flex items-center justify-center mb-4 md:mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 text-center">Liquidation Monitor</h2>
         <button
           onClick={loadLiquidatablePositions}
           disabled={isLoading}
-          className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded disabled:opacity-50"
+          className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded disabled:opacity-50 ml-4"
         >
           {isLoading ? 'Loading...' : 'Refresh'}
         </button>
@@ -205,11 +205,11 @@ const LiquidationMonitor = ({ account, isVisible = true }) => {
       {/* Status Messages */}
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-red-600">{error}</p>
+          <div className="flex items-center justify-center md:justify-between">
+            <p className="text-sm text-red-600 text-center md:text-left">{error}</p>
             <button
               onClick={clearMessages}
-              className="text-red-400 hover:text-red-600"
+              className="text-red-400 hover:text-red-600 ml-2"
             >
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -221,11 +221,11 @@ const LiquidationMonitor = ({ account, isVisible = true }) => {
 
       {success && (
         <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-green-600">{success}</p>
+          <div className="flex items-center justify-center md:justify-between">
+            <p className="text-sm text-green-600 text-center md:text-left">{success}</p>
             <button
               onClick={clearMessages}
-              className="text-green-400 hover:text-green-600"
+              className="text-green-400 hover:text-green-600 ml-2"
             >
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -242,7 +242,7 @@ const LiquidationMonitor = ({ account, isVisible = true }) => {
           <div className="h-20 bg-gray-200 rounded"></div>
         </div>
       ) : liquidatablePositions.length === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-6 md:py-8 flex flex-col items-center justify-center">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -337,14 +337,14 @@ const LiquidationMonitor = ({ account, isVisible = true }) => {
       )}
 
       {/* Info Box */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start">
+      <div className="mt-4 md:mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-start justify-center">
           <div className="flex-shrink-0">
             <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
           </div>
-          <div className="ml-3">
+          <div className="ml-3 text-center md:text-left">
             <h3 className="text-sm font-medium text-blue-800">Liquidation Information</h3>
             <div className="mt-1 text-sm text-blue-700">
               <p>Positions can be liquidated when:</p>

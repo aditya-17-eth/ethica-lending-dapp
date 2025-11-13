@@ -16,7 +16,8 @@ const LenderDashboard = () => {
   const [lenderData, setLenderData] = useState({
     depositAmount: '0',
     poolBalance: '0',
-    availableToWithdraw: '0'
+    availableToWithdraw: '0',
+    lockedInLoans: '0'
   });
 
   // State for pool statistics
@@ -49,24 +50,32 @@ const LenderDashboard = () => {
     try {
       setIsDataLoading(true);
       
-      const [lenderDetails, poolBalance] = await Promise.all([
+      const [lenderDetails, poolBalance, activeLoanCount] = await Promise.all([
         contract.getLenderDetails(account),
-        contract.getPoolBalance()
+        contract.getPoolBalance(),
+        contract.getActiveLoanCount()
       ]);
 
       // Always set the data, even if it's 0
       const depositAmountFormatted = lenderDetails ? formatEther(lenderDetails.depositAmount) : '0';
       const poolBalanceFormatted = poolBalance !== null && poolBalance !== undefined ? formatEther(poolBalance) : '0';
       
+      // Calculate available to withdraw (minimum of deposit and pool balance)
+      const depositNum = parseFloat(depositAmountFormatted);
+      const poolNum = parseFloat(poolBalanceFormatted);
+      const availableNum = Math.min(depositNum, poolNum);
+      const lockedNum = Math.max(0, depositNum - poolNum);
+      
       setLenderData({
         depositAmount: depositAmountFormatted,
         poolBalance: poolBalanceFormatted,
-        availableToWithdraw: depositAmountFormatted // Simplified for now
+        availableToWithdraw: availableNum.toString(),
+        lockedInLoans: lockedNum.toString()
       });
 
       setPoolStats({
         totalBalance: poolBalanceFormatted,
-        activeLoans: 0, // Will be calculated later
+        activeLoans: activeLoanCount !== null ? activeLoanCount : 0,
         totalLenders: 0, // Will be calculated later
         utilizationRate: 0 // Will be calculated later
       });
@@ -112,6 +121,9 @@ const LenderDashboard = () => {
       },
       onLoanRepaid: () => {
         loadLenderData(); // Refresh pool data when loans are repaid
+      },
+      onLiquidated: () => {
+        loadLenderData(); // Refresh pool data when loans are liquidated
       }
     });
 
@@ -302,7 +314,7 @@ const LenderDashboard = () => {
         />
 
         {/* Liquidation Monitor */}
-        <div className="mb-6">
+        <div className="mb-6 text-center">
           <LiquidationMonitor account={account} />
         </div>
 
@@ -320,35 +332,67 @@ const LenderDashboard = () => {
                   <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                        </svg>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                          </svg>
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-green-600">Total Deposited</p>
+                          <p className="text-2xl font-bold text-green-900">{lenderData.depositAmount} ETH</p>
+                        </div>
                       </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-green-600">Total Deposited</p>
-                        <p className="text-2xl font-bold text-green-900">{lenderData.depositAmount} ETH</p>
+                    </div>
+
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-blue-600">Available to Withdraw</p>
+                          <p className="text-2xl font-bold text-blue-900">{lenderData.availableToWithdraw} ETH</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-yellow-50 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <svg className="h-8 w-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-yellow-600">Locked in Loans</p>
+                          <p className="text-2xl font-bold text-yellow-900">{lenderData.lockedInLoans} ETH</p>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  {parseFloat(lenderData.lockedInLoans) > 0 && (
+                    <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <div className="flex items-start">
+                        <svg className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-blue-600">Available to Withdraw</p>
-                        <p className="text-2xl font-bold text-blue-900">{lenderData.availableToWithdraw} ETH</p>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-yellow-900">Funds Locked</p>
+                          <p className="text-xs text-yellow-800 mt-1">
+                            {lenderData.lockedInLoans} ETH is currently backing active MockDAI loans and cannot be withdrawn until loans are repaid.
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -527,9 +571,25 @@ const LenderDashboard = () => {
                 </button>
               </form>
 
-              {parseFloat(lenderData.availableToWithdraw) === 0 && (
+              {parseFloat(lenderData.availableToWithdraw) === 0 && parseFloat(lenderData.depositAmount) > 0 && (
+                <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex items-start">
+                    <svg className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-yellow-900">Withdrawal Unavailable</p>
+                      <p className="text-xs text-yellow-800 mt-1">
+                        Your funds are currently backing active MockDAI loans. You can withdraw once borrowers repay their loans.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {parseFloat(lenderData.availableToWithdraw) === 0 && parseFloat(lenderData.depositAmount) === 0 && (
                 <p className="text-sm text-gray-500 mt-2 text-center">
-                  No funds available for withdrawal
+                  No funds deposited
                 </p>
               )}
             </div>
