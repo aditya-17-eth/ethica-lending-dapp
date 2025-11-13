@@ -1,0 +1,56 @@
+{
+  "name": "ethica-lending-dapp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "test:contracts": "hardhat test",
+    "node": "hardhat node"
+  },
+  "keywords": [
+    "ethereum",
+    "defi",
+    "lending",
+    "dapp",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Decentralized peer-to-peer lending platform built on Ethereum",
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "autoprefixer": "^10.4.21",
+    "hardhat": "^2.26.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "ethers": "^6.15.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.5",
+    "react-scripts": "^5.0.1"
+  }
+}
