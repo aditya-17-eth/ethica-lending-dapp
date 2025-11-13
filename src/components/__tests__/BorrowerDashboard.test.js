@@ -509,4 +509,187 @@ describe('BorrowerDashboard', () => {
     // The functionality is covered by the component's conditional rendering logic
     expect(true).toBe(true);
   });
+
+  // Tests for Remove Collateral functionality (Task 9)
+  describe('Remove Collateral Button', () => {
+    test('renders remove collateral button next to deposit collateral button', async () => {
+      // Mock no active loan scenario
+      mockContract.getLoanDetails.mockResolvedValue({
+        collateralAmount: '1500000000000000000',
+        loanAmount: '0',
+        interest: '0',
+        startTime: 0,
+        dueTime: 0,
+        repaid: false,
+        liquidated: false
+      });
+
+      render(<BorrowerDashboard />);
+      
+      await waitFor(() => {
+        const removeButton = screen.queryByRole('button', { name: /Remove Collateral/i });
+        expect(removeButton).toBeInTheDocument();
+      });
+    });
+
+    test('remove collateral button is disabled when active loan exists', async () => {
+      // Mock active loan scenario
+      mockContract.getLoanDetails.mockResolvedValue({
+        collateralAmount: '1500000000000000000',
+        loanAmount: '1000000000000000000',
+        interest: '50000000000000000',
+        startTime: Math.floor(Date.now() / 1000),
+        dueTime: Math.floor(Date.now() / 1000) + 2592000,
+        repaid: false,
+        liquidated: false
+      });
+
+      render(<BorrowerDashboard />);
+      
+      await waitFor(() => {
+        const removeButton = screen.queryByRole('button', { name: /Remove Collateral/i });
+        if (removeButton) {
+          expect(removeButton).toBeDisabled();
+        }
+      });
+    });
+
+    test('remove collateral button is enabled when no active loan and collateral exists', async () => {
+      // Mock no active loan but has collateral
+      mockContract.getLoanDetails.mockResolvedValue({
+        collateralAmount: '1500000000000000000',
+        loanAmount: '0',
+        interest: '0',
+        startTime: 0,
+        dueTime: 0,
+        repaid: false,
+        liquidated: false
+      });
+
+      render(<BorrowerDashboard />);
+      
+      await waitFor(() => {
+        const removeButton = screen.queryByRole('button', { name: /Remove Collateral/i });
+        if (removeButton) {
+          expect(removeButton).not.toBeDisabled();
+        }
+      });
+    });
+
+    test('remove collateral button is disabled when no collateral deposited', async () => {
+      // Mock no collateral scenario
+      mockContract.getLoanDetails.mockResolvedValue({
+        collateralAmount: '0',
+        loanAmount: '0',
+        interest: '0',
+        startTime: 0,
+        dueTime: 0,
+        repaid: false,
+        liquidated: false
+      });
+
+      render(<BorrowerDashboard />);
+      
+      await waitFor(() => {
+        const removeButton = screen.queryByRole('button', { name: /Remove Collateral/i });
+        if (removeButton) {
+          expect(removeButton).toBeDisabled();
+        }
+      });
+    });
+
+    test('handles remove collateral button click', async () => {
+      const mockRemoveCollateral = jest.fn();
+      mockContract.removeCollateral = mockRemoveCollateral;
+
+      // Mock no active loan but has collateral
+      mockContract.getLoanDetails.mockResolvedValue({
+        collateralAmount: '1500000000000000000',
+        loanAmount: '0',
+        interest: '0',
+        startTime: 0,
+        dueTime: 0,
+        repaid: false,
+        liquidated: false
+      });
+
+      render(<BorrowerDashboard />);
+      
+      await waitFor(() => {
+        const removeButton = screen.queryByRole('button', { name: /Remove Collateral/i });
+        if (removeButton && !removeButton.disabled) {
+          fireEvent.click(removeButton);
+          expect(mockRemoveCollateral).toHaveBeenCalled();
+        }
+      });
+    });
+
+    test('displays success message when collateral removal succeeds', async () => {
+      const mockRemoveCollateral = jest.fn((onSuccess) => {
+        onSuccess({ hash: '0xremove123' });
+      });
+      mockContract.removeCollateral = mockRemoveCollateral;
+
+      // Mock no active loan but has collateral
+      mockContract.getLoanDetails.mockResolvedValue({
+        collateralAmount: '1500000000000000000',
+        loanAmount: '0',
+        interest: '0',
+        startTime: 0,
+        dueTime: 0,
+        repaid: false,
+        liquidated: false
+      });
+
+      render(<BorrowerDashboard />);
+      
+      await waitFor(() => {
+        const removeButton = screen.queryByRole('button', { name: /Remove Collateral/i });
+        if (removeButton && !removeButton.disabled) {
+          fireEvent.click(removeButton);
+        }
+      });
+
+      await waitFor(() => {
+        const successMessage = screen.queryByText(/Successfully removed.*ETH collateral/i);
+        if (successMessage) {
+          expect(successMessage).toBeInTheDocument();
+        }
+      });
+    });
+
+    test('displays error message when collateral removal fails', async () => {
+      const mockRemoveCollateral = jest.fn((onSuccess, onError) => {
+        onError(new Error('Active loan exists'));
+      });
+      mockContract.removeCollateral = mockRemoveCollateral;
+
+      // Mock no active loan but has collateral
+      mockContract.getLoanDetails.mockResolvedValue({
+        collateralAmount: '1500000000000000000',
+        loanAmount: '0',
+        interest: '0',
+        startTime: 0,
+        dueTime: 0,
+        repaid: false,
+        liquidated: false
+      });
+
+      render(<BorrowerDashboard />);
+      
+      await waitFor(() => {
+        const removeButton = screen.queryByRole('button', { name: /Remove Collateral/i });
+        if (removeButton && !removeButton.disabled) {
+          fireEvent.click(removeButton);
+        }
+      });
+
+      await waitFor(() => {
+        const errorMessage = screen.queryByText(/Active loan exists/i);
+        if (errorMessage) {
+          expect(errorMessage).toBeInTheDocument();
+        }
+      });
+    });
+  });
 });

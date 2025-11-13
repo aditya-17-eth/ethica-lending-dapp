@@ -19,6 +19,7 @@ const mockContract = {
     depositAmount: '1000000000000000000' // 1 ETH in wei
   }),
   getPoolBalance: jest.fn().mockResolvedValue('5000000000000000000'), // 5 ETH in wei
+  getActiveLoanCount: jest.fn().mockResolvedValue(3), // Mock 3 active loans
   depositFunds: jest.fn(),
   withdrawFunds: jest.fn(),
   setupEventListeners: jest.fn(() => () => {}) // Return cleanup function
@@ -47,6 +48,7 @@ describe('LenderDashboard', () => {
       depositAmount: '1000000000000000000'
     });
     mockContract.getPoolBalance.mockResolvedValue('5000000000000000000');
+    mockContract.getActiveLoanCount.mockResolvedValue(3);
   });
 
   test('renders lender dashboard with correct title', () => {
@@ -208,6 +210,109 @@ describe('LenderDashboard', () => {
     
     await waitFor(() => {
       expect(screen.getByText(/Transaction failed/)).toBeInTheDocument();
+    });
+  });
+
+  // Tests for Active Loan Count functionality (Task 9)
+  describe('Active Loan Count Display', () => {
+    test('fetches and displays active loan count from contract', async () => {
+      mockContract.getActiveLoanCount.mockResolvedValue(5);
+
+      render(<LenderDashboard />);
+      
+      await waitFor(() => {
+        expect(mockContract.getActiveLoanCount).toHaveBeenCalled();
+        expect(screen.getByText('5')).toBeInTheDocument();
+      });
+    });
+
+    test('displays zero active loans when no loans exist', async () => {
+      mockContract.getActiveLoanCount.mockResolvedValue(0);
+
+      render(<LenderDashboard />);
+      
+      await waitFor(() => {
+        expect(mockContract.getActiveLoanCount).toHaveBeenCalled();
+        const activeLoanElements = screen.getAllByText('0');
+        expect(activeLoanElements.length).toBeGreaterThan(0);
+      });
+    });
+
+    test('updates active loan count when new loan is created', async () => {
+      mockContract.getActiveLoanCount.mockResolvedValue(3);
+
+      const { rerender } = render(<LenderDashboard />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('3')).toBeInTheDocument();
+      });
+
+      // Simulate loan creation event
+      mockContract.getActiveLoanCount.mockResolvedValue(4);
+      rerender(<LenderDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('4')).toBeInTheDocument();
+      });
+    });
+
+    test('updates active loan count when loan is repaid', async () => {
+      mockContract.getActiveLoanCount.mockResolvedValue(5);
+
+      const { rerender } = render(<LenderDashboard />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('5')).toBeInTheDocument();
+      });
+
+      // Simulate loan repayment event
+      mockContract.getActiveLoanCount.mockResolvedValue(4);
+      rerender(<LenderDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('4')).toBeInTheDocument();
+      });
+    });
+
+    test('updates active loan count when loan is liquidated', async () => {
+      mockContract.getActiveLoanCount.mockResolvedValue(3);
+
+      const { rerender } = render(<LenderDashboard />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('3')).toBeInTheDocument();
+      });
+
+      // Simulate loan liquidation event
+      mockContract.getActiveLoanCount.mockResolvedValue(2);
+      rerender(<LenderDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('2')).toBeInTheDocument();
+      });
+    });
+
+    test('displays active loan count in pool statistics section', async () => {
+      mockContract.getActiveLoanCount.mockResolvedValue(7);
+
+      render(<LenderDashboard />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Pool Statistics')).toBeInTheDocument();
+        expect(screen.getByText('Active Loans')).toBeInTheDocument();
+        expect(screen.getByText('7')).toBeInTheDocument();
+      });
+    });
+
+    test('handles error when fetching active loan count fails', async () => {
+      mockContract.getActiveLoanCount.mockRejectedValue(new Error('Failed to fetch'));
+
+      render(<LenderDashboard />);
+      
+      await waitFor(() => {
+        // Should fallback to 0 or handle error gracefully
+        expect(mockContract.getActiveLoanCount).toHaveBeenCalled();
+      });
     });
   });
 });
