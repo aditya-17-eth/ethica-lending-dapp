@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import useContract from '../hooks/useContract';
 import { formatEther, formatTimeRemaining, calculateTimeRemaining } from '../utils/contractHelpers';
 
@@ -361,4 +361,4 @@ const LiquidationMonitor = ({ account, isVisible = true }) => {
   );
 };
 
-export default LiquidationMonitor;
+export default memo(LiquidationMonitor);
